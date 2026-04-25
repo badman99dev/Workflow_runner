@@ -253,27 +253,11 @@ jobs:
           zipStorePath=wrapper/dists
           WRAPPER_EOF
 
-      - name: Download Gradle Wrapper JAR
-        run: |
-          wget -q -O gradle/wrapper/gradle-wrapper.jar \
-            "https://github.com/gradle/gradle/raw/v8.5.0/gradle/wrapper/gradle-wrapper.jar"
-          ls -la gradle/wrapper/
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
 
-      - name: Create gradlew Script
-        run: |
-          cat > gradlew << 'GRADLEW_EOF'
-          #!/bin/sh
-          APP_HOME=$( cd "${0%/*}" && pwd )
-          CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
-          JAVA_HOME="${JAVA_HOME:-}"
-          if [ -n "$JAVA_HOME" ] ; then
-              JAVACMD="$JAVA_HOME/bin/java"
-          else
-              JAVACMD="java"
-          fi
-          exec "$JAVACMD" -Xmx64m -Xms64m -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
-          GRADLEW_EOF
-          chmod +x gradlew
+      - name: Generate Gradle Wrapper
+        run: gradle wrapper
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug --stacktrace
