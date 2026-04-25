@@ -122,10 +122,15 @@ jobs:
           import android.app.Activity;
           import android.content.Intent;
           import android.net.Uri;
+          import android.os.Build;
           import android.os.Bundle;
+          import android.view.View;
+          import android.view.WindowInsets;
+          import android.view.WindowInsetsController;
           import android.webkit.WebSettings;
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
+          import androidx.appcompat.widget.Toolbar;
 
           public class MainActivity extends Activity {
               private WebView webView;
@@ -135,8 +140,14 @@ jobs:
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
-                  webView = new WebView(this);
-                  setContentView(webView);
+                  hideSystemUI();
+                  setContentView(R.layout.activity_main);
+
+                  Toolbar toolbar = findViewById(R.id.toolbar);
+                  toolbar.setTitle("Opencode Web");
+                  toolbar.setTitleTextColor(0xFFFFFFFF);
+
+                  webView = findViewById(R.id.webview);
 
                   WebSettings settings = webView.getSettings();
                   settings.setJavaScriptEnabled(true);
@@ -162,6 +173,19 @@ jobs:
                   webView.loadUrl(APP_URL);
               }
 
+              private void hideSystemUI() {
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                      getWindow().getInsetsController().hide(WindowInsets.Type.statusBars());
+                      getWindow().getInsetsController().setSystemBarsBehavior(
+                          WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+                  } else {
+                      getWindow().getDecorView().setSystemUiVisibility(
+                          View.SYSTEM_UI_FLAG_FULLSCREEN |
+                          View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |
+                          View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
+                  }
+              }
+
               @Override
               public void onBackPressed() {
                   if (webView != null && webView.canGoBack()) {
@@ -173,6 +197,29 @@ jobs:
           }
           JAVA_EOF
 
+          mkdir -p app/src/main/res/layout
+          cat > app/src/main/res/layout/activity_main.xml << 'LAYOUT_EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:orientation="vertical">
+
+              <androidx.appcompat.widget.Toolbar
+                  android:id="@+id/toolbar"
+                  android:layout_width="match_parent"
+                  android:layout_height="?attr/actionBarSize"
+                  android:background="#1a1a2e"
+                  android:elevation="4dp" />
+
+              <WebView
+                  android:id="@+id/webview"
+                  android:layout_width="match_parent"
+                  android:layout_height="0dp"
+                  android:layout_weight="1" />
+          </LinearLayout>
+          LAYOUT_EOF
+
           cat > app/src/main/res/values/strings.xml << 'STRINGS_EOF'
           <resources>
               <string name="app_name">Opencode Web</string>
@@ -181,8 +228,12 @@ jobs:
 
           cat > app/src/main/res/values/styles.xml << 'STYLES_EOF'
           <resources>
-              <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
-                  <item name="android:windowFullscreen">true</item>
+              <style name="AppTheme" parent="Theme.AppCompat.NoActionBar">
+                  <item name="android:windowBackground">#0d1117</item>
+                  <item name="android:statusBarColor">#1a1a2e</item>
+                  <item name="android:navigationBarColor">#0d1117</item>
+                  <item name="android:windowLightStatusBar">false</item>
+                  <item name="android:windowLightNavigationBar">false</item>
               </style>
           </resources>
           STYLES_EOF
