@@ -188,6 +188,12 @@ jobs:
           </resources>
           STYLES_EOF
 
+          cat > gradle.properties << 'PROPS_EOF'
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          android.enableJetifier=true
+          PROPS_EOF
+
           cat > gradle/wrapper/gradle-wrapper.properties << 'WRAPPER_EOF'
           distributionBase=GRADLE_USER_HOME
           distributionPath=wrapper/dists
