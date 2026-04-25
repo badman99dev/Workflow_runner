@@ -22,12 +22,11 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Accept SDK Licenses
-        run: |
-          yes | sdkmanager --licenses
+        run: yes | sdkmanager --licenses
 
       - name: Install SDK Components
         run: |
-          sdkmanager "platforms;android-35" "build-tools;35.0.0" "cmdline-tools;latest"
+          sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
       - name: Generate WebView Project
         run: |
@@ -187,7 +186,7 @@ jobs:
                   <item name="android:windowFullscreen">true</item>
               </style>
           </resources>
-          STRINGS_EOF
+          STYLES_EOF
 
           cat > gradle/wrapper/gradle-wrapper.properties << 'WRAPPER_EOF'
           distributionBase=GRADLE_USER_HOME
@@ -198,8 +197,28 @@ jobs:
           zipStorePath=wrapper/dists
           WRAPPER_EOF
 
-      - name: Generate Gradle Wrapper
-        run: gradle wrapper
+      - name: Download Gradle Wrapper JAR
+        run: |
+          curl -L -o gradle/wrapper/gradle-wrapper.jar \
+            "https://github.com/gradle/gradle/raw/v8.5.0/gradle/wrapper/gradle-wrapper.jar"
+
+      - name: Create gradlew Script
+        run: |
+          cat > gradlew << 'GRADLEW_EOF'
+          #!/bin/sh
+          APP_BASE_NAME=${0##*/}
+          APP_HOME=$( cd "${0%/*}" && pwd )
+          DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
+          CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
+          JAVA_HOME="${JAVA_HOME:-}"
+          if [ -n "$JAVA_HOME" ] ; then
+              JAVACMD="$JAVA_HOME/bin/java"
+          else
+              JAVACMD="java"
+          fi
+          exec "$JAVACMD" $DEFAULT_JVM_OPTS -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
+          GRADLEW_EOF
+          chmod +x gradlew
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug --stacktrace
