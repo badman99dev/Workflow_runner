@@ -21,6 +21,10 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Accept SDK Licenses
+        run: |
+          yes | sdkmanager --licenses
+
       - name: Install SDK Components
         run: |
           sdkmanager "platforms;android-35" "build-tools;35.0.0" "cmdline-tools;latest"
@@ -28,11 +32,6 @@ jobs:
       - name: Generate WebView Project
         run: |
           mkdir -p app/src/main/java/com/opencode/webview
-          mkdir -p app/src/main/res/mipmap-hdpi
-          mkdir -p app/src/main/res/mipmap-mdpi
-          mkdir -p app/src/main/res/mipmap-xhdpi
-          mkdir -p app/src/main/res/mipmap-xxhdpi
-          mkdir -p app/src/main/res/mipmap-xxxhdpi
           mkdir -p app/src/main/res/values
           mkdir -p gradle/wrapper
 
@@ -51,6 +50,9 @@ jobs:
                   google()
                   mavenCentral()
               }
+          }
+          task clean(type: Delete) {
+              delete rootProject.buildDir
           }
           GRADLE_EOF
 
@@ -179,19 +181,28 @@ jobs:
           </resources>
           STRINGS_EOF
 
+          cat > app/src/main/res/values/styles.xml << 'STYLES_EOF'
+          <resources>
+              <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+                  <item name="android:windowFullscreen">true</item>
+              </style>
+          </resources>
+          STRINGS_EOF
+
           cat > gradle/wrapper/gradle-wrapper.properties << 'WRAPPER_EOF'
           distributionBase=GRADLE_USER_HOME
           distributionPath=wrapper/dists
           distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip
+          networkTimeout=10000
           zipStoreBase=GRADLE_USER_HOME
           zipStorePath=wrapper/dists
           WRAPPER_EOF
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - name: Generate Gradle Wrapper
+        run: gradle wrapper
 
       - name: Build Debug APK
-        run: gradle assembleDebug
+        run: ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
