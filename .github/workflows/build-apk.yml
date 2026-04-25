@@ -30,9 +30,29 @@ jobs:
 
       - name: Generate WebView Project
         run: |
-          mkdir -p app/src/main/java/com/opencode/webview
+          mkdir -p app/src/main/java/com/opencode/app
           mkdir -p app/src/main/res/values
           mkdir -p app/src/main/res/layout
+          mkdir -p app/src/main/res/mipmap-hdpi
+          mkdir -p app/src/main/res/mipmap-mdpi
+          mkdir -p app/src/main/res/mipmap-xhdpi
+          mkdir -p app/src/main/res/mipmap-xxhdpi
+          mkdir -p app/src/main/res/mipmap-xxxhdpi
+
+          # Download app icon
+          curl -sL https://litter.catbox.moe/xs0x8iavumtbxsoj.png -o /tmp/app_icon.png
+          # Resize for different mipmap densities
+          convert /tmp/app_icon.png -resize 72x72 app/src/main/res/mipmap-hdpi/ic_launcher.png 2>/dev/null || true
+          convert /tmp/app_icon.png -resize 48x48 app/src/main/res/mipmap-mdpi/ic_launcher.png 2>/dev/null || true
+          convert /tmp/app_icon.png -resize 96x96 app/src/main/res/mipmap-xhdpi/ic_launcher.png 2>/dev/null || true
+          convert /tmp/app_icon.png -resize 144x144 app/src/main/res/mipmap-xxhdpi/ic_launcher.png 2>/dev/null || true
+          convert /tmp/app_icon.png -resize 192x192 app/src/main/res/mipmap-xxxhdpi/ic_launcher.png 2>/dev/null || true
+          # Fallback: copy original if ImageMagick fails
+          for dir in mipmap-hdpi mipmap-mdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
+            if [ ! -f "app/src/main/res/$dir/ic_launcher.png" ]; then
+              cp /tmp/app_icon.png "app/src/main/res/$dir/ic_launcher.png"
+            fi
+          done
 
           cat > build.gradle << 'GRADLE_EOF'
           buildscript {
@@ -56,7 +76,7 @@ jobs:
           GRADLE_EOF
 
           cat > settings.gradle << 'SETTINGS_EOF'
-          rootProject.name = "OpencodeWebView"
+          rootProject.name = "Opencode"
           include ':app'
           SETTINGS_EOF
 
@@ -65,10 +85,10 @@ jobs:
               id 'com.android.application'
           }
           android {
-              namespace 'com.opencode.webview'
+              namespace 'com.opencode.app'
               compileSdk 35
               defaultConfig {
-                  applicationId "com.opencode.webview"
+                  applicationId "com.opencode.app"
                   minSdk 26
                   targetSdk 35
                   versionCode 1
@@ -99,7 +119,8 @@ jobs:
               <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
               <application
                   android:allowBackup="true"
-                  android:label="Opencode Web"
+                  android:label="Opencode"
+                  android:icon="@mipmap/ic_launcher"
                   android:supportsRtl="true"
                   android:theme="@style/AppTheme"
                   android:usesCleartextTraffic="true">
@@ -116,13 +137,14 @@ jobs:
           </manifest>
           MANIFEST_EOF
 
-          cat > app/src/main/java/com/opencode/webview/MainActivity.java << 'JAVA_EOF'
-          package com.opencode.webview;
+          cat > app/src/main/java/com/opencode/app/MainActivity.java << 'JAVA_EOF'
+          package com.opencode.app;
 
           import android.content.Intent;
           import android.net.Uri;
           import android.os.Build;
           import android.os.Bundle;
+          import android.view.Display;
           import android.view.View;
           import android.view.WindowInsets;
           import android.view.WindowInsetsController;
@@ -151,6 +173,10 @@ jobs:
                   settings.setCacheMode(WebSettings.LOAD_DEFAULT);
                   settings.setAllowFileAccess(false);
                   settings.setMediaPlaybackRequiresUserGesture(false);
+                  settings.setLoadWithOverviewMode(true);
+                  settings.setUseWideViewPort(true);
+                  settings.setBuiltInZoomControls(false);
+                  settings.setDisplayZoomControls(false);
 
                   webView.setWebViewClient(new WebViewClient() {
                       @Override
@@ -164,8 +190,15 @@ jobs:
                           startActivity(intent);
                           return true;
                       }
+
+                      @Override
+                      public void onPageFinished(WebView view, String url) {
+                          super.onPageFinished(view, url);
+                          webView.setInitialScale(87);
+                      }
                   });
 
+                  webView.setInitialScale(87);
                   webView.loadUrl(APP_URL);
               }
 
@@ -222,7 +255,7 @@ jobs:
 
           cat > app/src/main/res/values/strings.xml << 'STRINGS_EOF'
           <resources>
-              <string name="app_name">Opencode Web</string>
+              <string name="app_name">Opencode</string>
           </resources>
           STRINGS_EOF
 
