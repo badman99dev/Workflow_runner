@@ -206,9 +206,7 @@ jobs:
         run: |
           cat > gradlew << 'GRADLEW_EOF'
           #!/bin/sh
-          APP_BASE_NAME=${0##*/}
           APP_HOME=$( cd "${0%/*}" && pwd )
-          DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
           CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
           JAVA_HOME="${JAVA_HOME:-}"
           if [ -n "$JAVA_HOME" ] ; then
@@ -216,7 +214,7 @@ jobs:
           else
               JAVACMD="java"
           fi
-          exec "$JAVACMD" $DEFAULT_JVM_OPTS -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
+          exec "$JAVACMD" -Xmx64m -Xms64m -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
           GRADLEW_EOF
           chmod +x gradlew
 
