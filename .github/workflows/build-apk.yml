@@ -255,8 +255,11 @@ jobs:
 
       - name: Download Gradle Wrapper JAR
         run: |
-          curl -L -o gradle/wrapper/gradle-wrapper.jar \
-            "https://github.com/gradle/gradle/raw/v8.5.0/gradle/wrapper/gradle-wrapper.jar"
+          curl -L -o /tmp/gradle.zip "https://services.gradle.org/distributions/gradle-8.5-bin.zip"
+          unzip -q /tmp/gradle.zip -d /tmp/
+          find /tmp/gradle-8.5 -name "gradle-wrapper.jar" -exec cp {} gradle/wrapper/ \;
+          rm -rf /tmp/gradle.zip /tmp/gradle-8.5
+          ls -la gradle/wrapper/
 
       - name: Create gradlew Script
         run: |
