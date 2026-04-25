@@ -1,0 +1,215 @@
+name: Build Opencode WebView APK
+
+on:
+  push:
+    branches: ["main", "master"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK Components
+        run: |
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "cmdline-tools;latest"
+
+      - name: Generate WebView Project
+        run: |
+          mkdir -p app/src/main/java/com/opencode/webview
+          mkdir -p app/src/main/res/mipmap-hdpi
+          mkdir -p app/src/main/res/mipmap-mdpi
+          mkdir -p app/src/main/res/mipmap-xhdpi
+          mkdir -p app/src/main/res/mipmap-xxhdpi
+          mkdir -p app/src/main/res/mipmap-xxxhdpi
+          mkdir -p app/src/main/res/values
+          mkdir -p gradle/wrapper
+
+          cat > build.gradle << 'GRADLE_EOF'
+          buildscript {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.2.0'
+              }
+          }
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          GRADLE_EOF
+
+          cat > settings.gradle << 'SETTINGS_EOF'
+          rootProject.name = "OpencodeWebView"
+          include ':app'
+          SETTINGS_EOF
+
+          cat > app/build.gradle << 'APP_GRADLE_EOF'
+          plugins {
+              id 'com.android.application'
+          }
+          android {
+              namespace 'com.opencode.webview'
+              compileSdk 35
+              defaultConfig {
+                  applicationId "com.opencode.webview"
+                  minSdk 26
+                  targetSdk 35
+                  versionCode 1
+                  versionName "1.0"
+              }
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                  }
+                  debug {
+                      applicationIdSuffix ".debug"
+                  }
+              }
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+          dependencies {
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+          }
+          APP_GRADLE_EOF
+
+          cat > app/src/main/AndroidManifest.xml << 'MANIFEST_EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <application
+                  android:allowBackup="true"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="Opencode Web"
+                  android:supportsRtl="true"
+                  android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+                  android:usesCleartextTraffic="true">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:configChanges="orientation|screenSize|keyboard|keyboardHidden">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          MANIFEST_EOF
+
+          cat > app/src/main/java/com/opencode/webview/MainActivity.java << 'JAVA_EOF'
+          package com.opencode.webview;
+
+          import android.app.Activity;
+          import android.content.Intent;
+          import android.net.Uri;
+          import android.os.Bundle;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+
+          public class MainActivity extends Activity {
+              private WebView webView;
+              private static final String APP_URL = "https://opencodeai-nine.vercel.app/";
+              private static final String APP_HOST = "opencodeai-nine.vercel.app";
+
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  webView = new WebView(this);
+                  setContentView(webView);
+
+                  WebSettings settings = webView.getSettings();
+                  settings.setJavaScriptEnabled(true);
+                  settings.setDomStorageEnabled(true);
+                  settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+                  settings.setAllowFileAccess(false);
+                  settings.setMediaPlaybackRequiresUserGesture(false);
+
+                  webView.setWebViewClient(new WebViewClient() {
+                      @Override
+                      public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                          Uri uri = Uri.parse(url);
+                          String host = uri.getHost();
+                          if (host != null && (host.equals(APP_HOST) || host.endsWith("." + APP_HOST))) {
+                              return false;
+                          }
+                          Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+                          startActivity(intent);
+                          return true;
+                      }
+                  });
+
+                  webView.loadUrl(APP_URL);
+              }
+
+              @Override
+              public void onBackPressed() {
+                  if (webView != null && webView.canGoBack()) {
+                      webView.goBack();
+                  } else {
+                      super.onBackPressed();
+                  }
+              }
+          }
+          JAVA_EOF
+
+          cat > app/src/main/res/values/strings.xml << 'STRINGS_EOF'
+          <resources>
+              <string name="app_name">Opencode Web</string>
+          </resources>
+          STRINGS_EOF
+
+          cat > gradle/wrapper/gradle-wrapper.properties << 'WRAPPER_EOF'
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          WRAPPER_EOF
+
+      - name: Build Debug APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencode-webview-apk
+          path: app/build/outputs/apk/debug/*.apk
+
+      - name: Upload APK to TempServe
+        run: |
+          APK_FILE=$(find app/build/outputs/apk/debug -name "*.apk" | head -1)
+          APK_NAME=$(basename "$APK_FILE")
+          echo "Uploading $APK_NAME to TempServe..."
+          RESP=$(curl -s -X POST https://tempserv.badman993944.workers.dev/api/upload \
+            -F "mode=file" \
+            -F "expiry=24hr" \
+            -F "paths=[\"$APK_NAME\"]" \
+            -F "files=@$APK_FILE")
+          echo "TempServe Response: $RESP"
+          DL_URL=$(echo "$RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('url','FAILED'))")
+          echo "========================================="
+          echo "APK Download: $DL_URL"
+          echo "========================================="
