@@ -32,7 +32,7 @@ jobs:
         run: |
           mkdir -p app/src/main/java/com/opencode/webview
           mkdir -p app/src/main/res/values
-          mkdir -p gradle/wrapper
+          mkdir -p app/src/main/res/layout
 
           cat > build.gradle << 'GRADLE_EOF'
           buildscript {
@@ -44,6 +44,12 @@ jobs:
                   classpath 'com.android.tools.build:gradle:8.2.0'
               }
           }
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
           task clean(type: Delete) {
               delete rootProject.buildDir
           }
@@ -52,13 +58,6 @@ jobs:
           cat > settings.gradle << 'SETTINGS_EOF'
           rootProject.name = "OpencodeWebView"
           include ':app'
-          dependencyResolutionManagement {
-              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
           SETTINGS_EOF
 
           cat > app/build.gradle << 'APP_GRADLE_EOF'
@@ -102,7 +101,7 @@ jobs:
                   android:allowBackup="true"
                   android:label="Opencode Web"
                   android:supportsRtl="true"
-                  android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+                  android:theme="@style/AppTheme"
                   android:usesCleartextTraffic="true">
                   <activity
                       android:name=".MainActivity"
@@ -198,7 +197,6 @@ jobs:
           }
           JAVA_EOF
 
-          mkdir -p app/src/main/res/layout
           cat > app/src/main/res/layout/activity_main.xml << 'LAYOUT_EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -245,20 +243,11 @@ jobs:
           android.enableJetifier=true
           PROPS_EOF
 
-          cat > gradle/wrapper/gradle-wrapper.properties << 'WRAPPER_EOF'
-          distributionBase=GRADLE_USER_HOME
-          distributionPath=wrapper/dists
-          distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip
-          networkTimeout=10000
-          zipStoreBase=GRADLE_USER_HOME
-          zipStorePath=wrapper/dists
-          WRAPPER_EOF
-
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
       - name: Generate Gradle Wrapper
-        run: gradle wrapper
+        run: gradle wrapper --gradle-version 8.5
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug --stacktrace
