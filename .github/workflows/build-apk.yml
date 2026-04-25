@@ -44,12 +44,6 @@ jobs:
                   classpath 'com.android.tools.build:gradle:8.2.0'
               }
           }
-          allprojects {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
           task clean(type: Delete) {
               delete rootProject.buildDir
           }
@@ -58,6 +52,13 @@ jobs:
           cat > settings.gradle << 'SETTINGS_EOF'
           rootProject.name = "OpencodeWebView"
           include ':app'
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
           SETTINGS_EOF
 
           cat > app/build.gradle << 'APP_GRADLE_EOF'
